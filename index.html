@@ -3,13 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Vault — Penyimpan Kredensial</title>
+<title>Bangker Rahasia — Penyimpan Kredensial</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#10131a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Vault">
+<meta name="apple-mobile-web-app-title" content="Bangker Rahasia">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -257,6 +257,13 @@
     font-family:var(--font-display);font-weight:600;font-size:15px;
     margin:0 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
+  a.entry-label-link{
+    display:inline-flex;align-items:center;gap:6px;
+    color:var(--accent);text-decoration:underline;text-decoration-color:var(--accent-soft-2);
+    text-underline-offset:3px;cursor:pointer;
+  }
+  a.entry-label-link:hover,a.entry-label-link:active{color:var(--accent-hover);}
+  a.entry-label-link svg{flex:none;color:var(--accent);}
   .entry-row{
     display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:13px;
   }
@@ -363,7 +370,7 @@
         <circle cx="32" cy="37" r="2.4" fill="var(--accent)"/>
       </svg>
     </div>
-    <h1 class="lock-title" id="lockTitle">Vault</h1>
+    <h1 class="lock-title" id="lockTitle">Bangker Rahasia</h1>
     <p class="lock-sub" id="lockSub">Masukkan kata sandi utama untuk membuka.</p>
 
     <div class="lock-error" id="lockError"></div>
@@ -377,7 +384,7 @@
         <label for="pwInput2">Ulangi Kata Sandi</label>
         <input type="password" id="pwInput2" placeholder="••••••••" autocomplete="new-password">
       </div>
-      <button type="submit" class="btn btn-primary" id="lockSubmitBtn">Buka Vault</button>
+      <button type="submit" class="btn btn-primary" id="lockSubmitBtn">Buka Bangker Rahasia</button>
     </form>
 
     <div class="lock-footnote" id="lockFootnote"></div>
@@ -394,7 +401,7 @@
         <path d="M25 29v-6a7 7 0 0 1 14 0v6" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/>
         <circle cx="32" cy="37" r="2.4" fill="var(--accent)"/>
       </svg>
-      Vault
+      Bangker Rahasia
     </div>
     <div class="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -464,6 +471,10 @@
         <input type="text" id="entryUsername" placeholder="user@email.com" required>
       </div>
       <div class="field">
+        <label for="entryUrl">Link Aplikasi/Situs (opsional)</label>
+        <input type="url" id="entryUrl" placeholder="https://contoh.com">
+      </div>
+      <div class="field">
         <label for="entryGroupSelect">Grup</label>
         <select id="entryGroupSelect"></select>
       </div>
@@ -504,7 +515,7 @@
 <!-- ================= MODAL: CADANGAN ================= -->
 <div class="modal-overlay hidden" id="backupModalOverlay">
   <div class="modal">
-    <h2>Cadangan Vault</h2>
+    <h2>Cadangan Bangker Rahasia</h2>
     <p class="modal-desc">Data diekspor dalam kondisi terenkripsi (AES-256). File cadangan hanya bisa dibuka dengan kata sandi utama vault ini.</p>
     <button type="button" class="btn btn-primary" id="exportBackupBtn">Unduh Cadangan (.json)</button>
     <div class="modal-divider"></div>
@@ -685,18 +696,18 @@
     $("pwInput1").value = "";
     $("pwInput2").value = "";
     if(setupMode){
-      lockTitle.textContent = "Buat Vault";
+      lockTitle.textContent = "Buat Bangker Rahasia";
       lockSub.textContent = "Buat kata sandi utama. Ingat baik-baik — tidak bisa dipulihkan jika lupa.";
       labelPw1.textContent = "Kata Sandi Utama Baru";
       fieldPw2.classList.remove("hidden");
-      lockSubmitBtn.textContent = "Buat & Buka Vault";
+      lockSubmitBtn.textContent = "Buat & Buka Bangker Rahasia";
       lockFootnote.textContent = "Data akan dienkripsi (AES-256) dan disimpan hanya di perangkat ini.";
     } else {
-      lockTitle.textContent = "Vault Terkunci";
+      lockTitle.textContent = "Bangker Rahasia Terkunci";
       lockSub.textContent = "Masukkan kata sandi utama untuk membuka.";
       labelPw1.textContent = "Kata Sandi Utama";
       fieldPw2.classList.add("hidden");
-      lockSubmitBtn.textContent = "Buka Vault";
+      lockSubmitBtn.textContent = "Buka Bangker Rahasia";
       lockFootnote.textContent = "Data tersimpan terenkripsi secara lokal di perangkat ini.";
     }
   }
@@ -773,6 +784,14 @@
     const d = document.createElement("div");
     d.textContent = str;
     return d.innerHTML;
+  }
+
+  function safeUrl(url){
+    if(!url) return null;
+    const trimmed = url.trim();
+    if(!trimmed) return null;
+    if(/^https?:\/\//i.test(trimmed)) return trimmed;
+    return "https://" + trimmed;
   }
 
   function groupName(id){
@@ -881,10 +900,16 @@
       card.className = "entry-card";
       const gName = groupName(entry.groupId);
       const badgeHtml = (activeGroupId === null && gName) ? `<span class="entry-group-badge">${escapeHtml(gName)}</span><br>` : "";
+      const entryUrl = safeUrl(entry.url);
+      const labelHtml = entryUrl
+        ? `<a class="entry-label entry-label-link" href="${escapeHtml(entryUrl)}" target="_blank" rel="noopener noreferrer" title="Buka ${escapeHtml(entryUrl)}">${escapeHtml(entry.label)}
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+          </a>`
+        : `<p class="entry-label">${escapeHtml(entry.label)}</p>`;
       card.innerHTML = `
         <div class="entry-main">
           ${badgeHtml}
-          <p class="entry-label">${escapeHtml(entry.label)}</p>
+          ${labelHtml}
           <div class="entry-row">
             <span class="tag">User</span>
             <span class="val">${escapeHtml(entry.username)}</span>
@@ -904,6 +929,9 @@
           </div>
         </div>
         <div class="entry-actions">
+          ${entryUrl ? `<button class="icon-btn open-entry" title="Buka tautan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14L21 3"/></svg>
+          </button>` : ""}
           <button class="icon-btn edit-entry" title="Edit">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
@@ -912,6 +940,13 @@
           </button>
         </div>
       `;
+
+      if(entryUrl){
+        const openBtn = card.querySelector(".open-entry");
+        if(openBtn){
+          openBtn.addEventListener("click", () => window.open(entryUrl, "_blank", "noopener,noreferrer"));
+        }
+      }
 
       card.querySelector(".copy-user").addEventListener("click", () => copyToClipboard(entry.username, "Username"));
       card.querySelector(".copy-pw").addEventListener("click", () => copyToClipboard(entry.password, "Password"));
@@ -1021,6 +1056,7 @@
       $("entryLabel").value = entry.label;
       $("entryUsername").value = entry.username;
       $("entryPassword").value = entry.password;
+      $("entryUrl").value = entry.url || "";
       populateGroupSelect(entry.groupId || "");
     } else {
       $("modalTitle").textContent = "Tambah Kredensial";
@@ -1052,6 +1088,7 @@
     const label = $("entryLabel").value.trim();
     const username = $("entryUsername").value.trim();
     const password = $("entryPassword").value;
+    const url = $("entryUrl").value.trim();
     let groupId = $("entryGroupSelect").value;
 
     if(!label || !username || !password) return;
@@ -1067,12 +1104,13 @@
         entry.label = label;
         entry.username = username;
         entry.password = password;
+        entry.url = url;
         entry.groupId = groupId;
       }
     } else {
       entries.push({
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
-        label, username, password, groupId
+        label, username, password, url, groupId
       });
     }
 
@@ -1120,7 +1158,7 @@
       return;
     }
     const payload = {
-      app: "vault-backup",
+      app: "bangker-backup",
       version: 1,
       exportedAt: new Date().toISOString(),
       salt, data
@@ -1130,7 +1168,7 @@
     const a = document.createElement("a");
     const ts = new Date().toISOString().slice(0,10);
     a.href = url;
-    a.download = "vault-backup-" + ts + ".json";
+    a.download = "bangker-backup-" + ts + ".json";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -1151,7 +1189,7 @@
         e.target.value = "";
         return;
       }
-      if(!payload || payload.app !== "vault-backup" || !payload.salt || !payload.data){
+      if(!payload || payload.app !== "bangker-backup" || !payload.salt || !payload.data){
         showToast("File cadangan tidak dikenali");
         e.target.value = "";
         return;
@@ -1246,7 +1284,7 @@
   window.addEventListener("beforeunload", function(e){
     if(vaultKey){
       e.preventDefault();
-      e.returnValue = "Vault masih terbuka. Yakin ingin keluar tanpa mengunci?";
+      e.returnValue = "Bangker Rahasia masih terbuka. Yakin ingin keluar tanpa mengunci?";
       return e.returnValue;
     }
   });
