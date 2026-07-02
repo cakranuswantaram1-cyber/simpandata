@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vault — Penyimpan Kredensial</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#10131a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vault">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#10131a;
+    --bg-elev:#171b24;
+    --panel:#1b202b;
+    --panel-2:#212734;
+    --border:#2b3140;
+    --border-soft:#232936;
+    --text:#e7eaf0;
+    --text-muted:#8993a6;
+    --text-faint:#5c6474;
+    --accent:#c9a24b;
+    --accent-hover:#dbb765;
+    --accent-soft:rgba(201,162,75,0.12);
+    --accent-soft-2:rgba(201,162,75,0.22);
+    --danger:#e0645c;
+    --danger-soft:rgba(224,100,92,0.12);
+    --success:#55b583;
+    --radius:10px;
+    --font-display:'Space Grotesk',system-ui,sans-serif;
+    --font-body:'Inter',system-ui,sans-serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      linear-gradient(var(--bg-elev) 1px, transparent 1px) 0 0/100% 44px,
+      linear-gradient(90deg, var(--bg-elev) 1px, transparent 1px) 0 0/44px 100%,
+      var(--bg);
+    background-blend-mode: normal;
+    color:var(--text);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed;inset:0;
+    background:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px) 0 0/100% 44px,
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px) 0 0/44px 100%;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  button{font-family:inherit;}
+  input{font-family:inherit;}
+
+  /* ---------- shared ---------- */
+  .hidden{display:none !important;}
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    font-family:var(--font-display);font-weight:700;font-size:20px;letter-spacing:0.02em;
+  }
+  .brand .dial{width:26px;height:26px;flex:none;}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:11px;letter-spacing:0.14em;
+    color:var(--text-faint);text-transform:uppercase;
+  }
+
+  /* ---------- lock screen ---------- */
+  #lockScreen{
+    position:relative;z-index:1;
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+  }
+  .lock-card{
+    width:100%;max-width:380px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:36px 32px 32px;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+  }
+  .lock-dial-wrap{
+    display:flex;justify-content:center;margin-bottom:22px;
+  }
+  .lock-dial{width:64px;height:64px;}
+  .lock-dial .ring{
+    transform-origin:32px 32px;
+    animation:none;
+  }
+  .lock-dial.spin .ring{
+    animation:dial-spin 0.7s cubic-bezier(.2,.8,.2,1);
+  }
+  @keyframes dial-spin{
+    from{transform:rotate(0deg);}
+    to{transform:rotate(300deg);}
+  }
+  .lock-title{
+    font-family:var(--font-display);font-weight:700;font-size:22px;
+    text-align:center;margin:0 0 4px;
+  }
+  .lock-sub{
+    text-align:center;color:var(--text-muted);font-size:13.5px;
+    margin:0 0 26px;line-height:1.5;
+  }
+  .field{margin-bottom:14px;}
+  .field label{
+    display:block;font-family:var(--font-mono);font-size:11px;
+    letter-spacing:0.1em;color:var(--text-faint);text-transform:uppercase;
+    margin-bottom:7px;
+  }
+  .field input{
+    width:100%;padding:11px 13px;
+    background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-size:14.5px;
+    outline:none;transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  .field input::placeholder{color:var(--text-faint);}
+  .field input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft);
+  }
+  .btn{
+    width:100%;padding:12px 16px;border-radius:8px;border:none;
+    font-family:var(--font-display);font-weight:600;font-size:14.5px;
+    cursor:pointer;transition:background .15s ease, transform .05s ease;
+  }
+  .btn:active{transform:translateY(1px);}
+  .btn-primary{background:var(--accent);color:#1a1408;}
+  .btn-primary:hover{background:var(--accent-hover);}
+  .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border);}
+  .btn-ghost:hover{color:var(--text);border-color:var(--text-faint);}
+  .btn-danger-outline{background:transparent;color:var(--danger);border:1px solid rgba(224,100,92,0.35);}
+  .btn-danger-outline:hover{background:var(--danger-soft);}
+
+  .lock-error{
+    background:var(--danger-soft);color:var(--danger);
+    border:1px solid rgba(224,100,92,0.3);
+    border-radius:8px;padding:9px 12px;font-size:13px;
+    margin-bottom:14px;display:none;
+  }
+  .lock-error.show{display:block;}
+
+  .lock-footnote{
+    text-align:center;margin-top:18px;color:var(--text-faint);font-size:12px;line-height:1.5;
+  }
+
+  /* ---------- vault screen ---------- */
+  #vaultScreen{position:relative;z-index:1;min-height:100vh;padding-bottom:60px;}
+  .topbar{
+    display:flex;align-items:center;gap:20px;
+    padding:20px 28px;border-bottom:1px solid var(--border-soft);
+    background:rgba(23,27,36,0.6);backdrop-filter:blur(6px);
+    position:sticky;top:0;z-index:5;
+  }
+  .topbar .search{
+    flex:1;max-width:420px;position:relative;
+  }
+  .topbar .search input{
+    width:100%;padding:10px 13px 10px 36px;
+    background:var(--bg-elev);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-size:14px;outline:none;
+  }
+  .topbar .search input:focus{border-color:var(--accent);}
+  .topbar .search svg{
+    position:absolute;left:11px;top:50%;transform:translateY(-50%);
+    width:15px;height:15px;color:var(--text-faint);
+  }
+  .topbar-spacer{flex:1;}
+  .topbar-actions{display:flex;gap:10px;align-items:center;}
+  .btn-icon{
+    display:inline-flex;align-items:center;gap:7px;
+    padding:9px 14px;border-radius:8px;
+    font-family:var(--font-display);font-weight:600;font-size:13.5px;
+    cursor:pointer;border:1px solid var(--border);background:var(--panel-2);color:var(--text);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .btn-icon svg{width:15px;height:15px;flex:none;}
+  .btn-icon:hover{border-color:var(--text-faint);}
+  .btn-icon.primary{background:var(--accent);color:#1a1408;border-color:var(--accent);}
+  .btn-icon.primary:hover{background:var(--accent-hover);}
+
+  .layout{display:flex;align-items:flex-start;}
+  .sidebar{
+    width:210px;flex:none;padding:22px 12px;
+    border-right:1px solid var(--border-soft);
+    position:sticky;top:65px;
+    max-height:calc(100vh - 65px);overflow-y:auto;
+  }
+  .sidebar-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 10px 10px;
+  }
+  .sidebar-head .eyebrow{margin:0;}
+  .sidebar-head .icon-btn{width:22px;height:22px;color:var(--text-muted);}
+  .sidebar-head .icon-btn:hover{color:var(--accent);}
+  .group-nav{display:flex;flex-direction:column;gap:2px;}
+  .group-item{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 10px;border-radius:7px;cursor:pointer;
+    font-size:13.5px;color:var(--text-muted);
+    border:1px solid transparent;
+    transition:background .12s ease, color .12s ease;
+  }
+  .group-item:hover{background:var(--panel-2);color:var(--text);}
+  .group-item.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent-soft-2);}
+  .group-item .gname{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .group-item .gcount{font-family:var(--font-mono);font-size:11px;color:var(--text-faint);}
+  .group-item.active .gcount{color:var(--accent);}
+  .group-item .gdel{
+    display:none;background:none;border:none;color:var(--text-faint);cursor:pointer;
+    padding:2px;border-radius:4px;flex:none;
+  }
+  .group-item:hover .gdel{display:inline-flex;}
+  .group-item .gdel:hover{color:var(--danger);}
+
+  .content{max-width:none;flex:1;margin:0;padding:28px;min-width:0;}
+  .content-head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .content-head h1{
+    font-family:var(--font-display);font-size:19px;margin:0;font-weight:600;
+  }
+  .content-head .count{color:var(--text-faint);font-size:13px;font-family:var(--font-mono);}
+
+  .empty-state{
+    text-align:center;padding:70px 20px;color:var(--text-muted);
+    border:1px dashed var(--border);border-radius:var(--radius);
+  }
+  .empty-state svg{width:40px;height:40px;color:var(--text-faint);margin-bottom:14px;}
+  .empty-state p{margin:0 0 4px;font-size:14.5px;}
+  .empty-state span{font-size:12.5px;color:var(--text-faint);}
+
+  .entry-list{display:flex;flex-direction:column;gap:10px;}
+  .entry-card{
+    background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px 18px;
+    display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;
+    transition:border-color .15s ease;
+  }
+  .entry-card:hover{border-color:var(--border-soft);border-color:#3a4152;}
+  .entry-main{min-width:0;}
+  .entry-label{
+    font-family:var(--font-display);font-weight:600;font-size:15px;
+    margin:0 0 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .entry-row{
+    display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:13px;
+  }
+  .entry-row:last-child{margin-bottom:0;}
+  .entry-group-badge{
+    display:inline-block;font-family:var(--font-mono);font-size:10px;
+    letter-spacing:0.05em;color:var(--accent);background:var(--accent-soft);
+    padding:2px 8px;border-radius:20px;margin-bottom:9px;
+  }
+  .entry-row .tag{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:0.08em;
+    color:var(--text-faint);width:62px;flex:none;text-transform:uppercase;
+  }
+  .entry-row .val{
+    font-family:var(--font-mono);font-size:13px;color:var(--text-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .icon-btn{
+    background:none;border:none;cursor:pointer;color:var(--text-faint);
+    padding:4px;display:inline-flex;align-items:center;justify-content:center;
+    border-radius:5px;flex:none;transition:color .15s ease, background .15s ease;
+  }
+  .icon-btn svg{width:14px;height:14px;}
+  .icon-btn:hover{color:var(--accent);background:var(--accent-soft);}
+
+  .entry-actions{display:flex;gap:6px;}
+  .entry-actions .icon-btn{
+    width:32px;height:32px;color:var(--text-muted);
+  }
+  .entry-actions .icon-btn.danger:hover{color:var(--danger);background:var(--danger-soft);}
+
+  /* ---------- modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(8,10,14,0.65);
+    display:flex;align-items:center;justify-content:center;
+    z-index:20;padding:20px;backdrop-filter:blur(2px);
+  }
+  .modal{
+    width:100%;max-width:420px;background:var(--panel);
+    border:1px solid var(--border);border-radius:var(--radius);
+    padding:26px 26px 22px;box-shadow:0 24px 70px rgba(0,0,0,0.5);
+  }
+  .modal h2{
+    font-family:var(--font-display);font-size:17px;margin:0 0 18px;font-weight:600;
+  }
+  .modal-actions{display:flex;gap:10px;margin-top:20px;}
+  .modal-desc{color:var(--text-muted);font-size:13.5px;line-height:1.55;margin:0 0 20px;}
+  .modal-divider{height:1px;background:var(--border-soft);margin:18px 0;}
+  .modal .btn + .btn{margin-top:0;}
+  .modal .btn-block{display:block;width:100%;text-align:center;text-decoration:none;box-sizing:border-box;}
+  .pw-input-wrap{position:relative;}
+  .pw-input-wrap input{padding-right:40px;}
+  .pw-toggle{
+    position:absolute;right:8px;top:50%;transform:translateY(-50%);
+  }
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2);border:1px solid var(--border);color:var(--text);
+    padding:10px 18px;border-radius:8px;font-size:13.5px;
+    display:flex;align-items:center;gap:8px;
+    opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;
+    z-index:50;box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  #toast svg{width:14px;height:14px;color:var(--success);}
+
+  @media (max-width:720px){
+    .layout{flex-direction:column;}
+    .sidebar{
+      width:100%;position:static;max-height:none;
+      border-right:none;border-bottom:1px solid var(--border-soft);
+      padding:14px 16px;
+    }
+    .group-nav{flex-direction:row;flex-wrap:wrap;}
+    .group-item{flex:none;}
+  }
+
+  @media (max-width:560px){
+    .topbar{padding:14px 16px;flex-wrap:wrap;}
+    .topbar .search{max-width:none;order:3;flex-basis:100%;}
+    .content{padding:18px;}
+    .entry-card{grid-template-columns:1fr;}
+    .entry-actions{justify-content:flex-end;}
+  }
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOCK SCREEN ================= -->
+<div id="lockScreen">
+  <div class="lock-card">
+    <div class="lock-dial-wrap">
+      <svg class="lock-dial" id="lockDial" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="27" stroke="var(--border)" stroke-width="2"/>
+        <g class="ring">
+          <circle cx="32" cy="32" r="27" stroke="var(--accent)" stroke-width="2" stroke-dasharray="8 10" stroke-linecap="round"/>
+        </g>
+        <rect x="20" y="29" width="24" height="18" rx="3" fill="var(--panel-2)" stroke="var(--accent)" stroke-width="2"/>
+        <path d="M25 29v-6a7 7 0 0 1 14 0v6" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="32" cy="37" r="2.4" fill="var(--accent)"/>
+      </svg>
+    </div>
+    <h1 class="lock-title" id="lockTitle">Vault</h1>
+    <p class="lock-sub" id="lockSub">Masukkan kata sandi utama untuk membuka.</p>
+
+    <div class="lock-error" id="lockError"></div>
+
+    <form id="lockForm" autocomplete="off">
+      <div class="field">
+        <label id="labelPw1" for="pwInput1">Kata Sandi Utama</label>
+        <input type="password" id="pwInput1" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field hidden" id="fieldPw2">
+        <label for="pwInput2">Ulangi Kata Sandi</label>
+        <input type="password" id="pwInput2" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <button type="submit" class="btn btn-primary" id="lockSubmitBtn">Buka Vault</button>
+    </form>
+
+    <div class="lock-footnote" id="lockFootnote"></div>
+  </div>
+</div>
+
+<!-- ================= VAULT SCREEN ================= -->
+<div id="vaultScreen" class="hidden">
+  <div class="topbar">
+    <div class="brand">
+      <svg class="dial" viewBox="0 0 64 64" fill="none">
+        <circle cx="32" cy="32" r="27" stroke="var(--border)" stroke-width="2"/>
+        <rect x="20" y="29" width="24" height="18" rx="3" fill="var(--panel-2)" stroke="var(--accent)" stroke-width="2"/>
+        <path d="M25 29v-6a7 7 0 0 1 14 0v6" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <circle cx="32" cy="37" r="2.4" fill="var(--accent)"/>
+      </svg>
+      Vault
+    </div>
+    <div class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input type="text" id="searchInput" placeholder="Cari nama, username...">
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="topbar-actions">
+      <button class="btn-icon primary" id="addBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Tambah
+      </button>
+      <button class="btn-icon" id="backupBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        Cadangan
+      </button>
+      <button class="btn-icon" id="changePwBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8" cy="15" r="4"/><path d="M10.5 12.5L20 3M20 3v4M20 3h-4"/></svg>
+        Ganti Sandi
+      </button>
+      <button class="btn-icon" id="lockBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        Kunci
+      </button>
+    </div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-head">
+        <span class="eyebrow">Grup</span>
+        <button class="icon-btn" id="addGroupBtn" title="Buat grup baru">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <nav class="group-nav" id="groupNav"></nav>
+    </aside>
+
+    <div class="content">
+      <div class="content-head">
+        <h1 id="contentTitle">Kredensial Tersimpan</h1>
+        <span class="count" id="entryCount">0 item</span>
+      </div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+        <p>Belum ada kredensial tersimpan</p>
+        <span>Klik "Tambah" untuk menyimpan user &amp; password pertama.</span>
+      </div>
+
+      <div class="entry-list" id="entryList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: TAMBAH/EDIT ================= -->
+<div class="modal-overlay hidden" id="entryModalOverlay">
+  <div class="modal">
+    <h2 id="modalTitle">Tambah Kredensial</h2>
+    <form id="entryForm" autocomplete="off">
+      <input type="hidden" id="entryId">
+      <div class="field">
+        <label for="entryLabel">Nama / Situs</label>
+        <input type="text" id="entryLabel" placeholder="cth. Gmail Kantor" required>
+      </div>
+      <div class="field">
+        <label for="entryUsername">Username / Email</label>
+        <input type="text" id="entryUsername" placeholder="user@email.com" required>
+      </div>
+      <div class="field">
+        <label for="entryGroupSelect">Grup</label>
+        <select id="entryGroupSelect"></select>
+      </div>
+      <div class="field">
+        <label for="entryPassword">Password</label>
+        <div class="pw-input-wrap">
+          <input type="password" id="entryPassword" placeholder="••••••••" required autocomplete="new-password">
+          <button type="button" class="icon-btn pw-toggle" id="entryPwToggle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelEntryBtn">Batal</button>
+        <button type="submit" class="btn btn-primary" id="saveEntryBtn">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: GRUP BARU ================= -->
+<div class="modal-overlay hidden" id="groupModalOverlay">
+  <div class="modal">
+    <h2>Buat Grup Baru</h2>
+    <form id="groupForm" autocomplete="off">
+      <div class="field">
+        <label for="groupNameInput">Nama Grup</label>
+        <input type="text" id="groupNameInput" placeholder="cth. Akun Sekolah" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelGroupBtn">Batal</button>
+        <button type="submit" class="btn btn-primary">Buat Grup</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL: CADANGAN ================= -->
+<div class="modal-overlay hidden" id="backupModalOverlay">
+  <div class="modal">
+    <h2>Cadangan Vault</h2>
+    <p class="modal-desc">Data diekspor dalam kondisi terenkripsi (AES-256). File cadangan hanya bisa dibuka dengan kata sandi utama vault ini.</p>
+    <button type="button" class="btn btn-primary" id="exportBackupBtn">Unduh Cadangan (.json)</button>
+    <div class="modal-divider"></div>
+    <p class="modal-desc" style="margin-bottom:12px;">Pulihkan dari file cadangan akan menggantikan seluruh data vault saat ini.</p>
+    <label class="btn btn-ghost btn-block" id="importBackupLabel" for="importBackupInput">Pilih File Cadangan</label>
+    <input type="file" id="importBackupInput" accept="application/json" class="hidden">
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost" id="closeBackupBtn">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL: GANTI SANDI ================= -->
+<div class="modal-overlay hidden" id="changePwModalOverlay">
+  <div class="modal">
+    <h2>Ganti Kata Sandi Utama</h2>
+    <div class="lock-error" id="changePwError"></div>
+    <form id="changePwForm" autocomplete="off">
+      <div class="field">
+        <label for="currentPwInput">Kata Sandi Saat Ini</label>
+        <input type="password" id="currentPwInput" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <div class="field">
+        <label for="newPwInput">Kata Sandi Baru</label>
+        <input type="password" id="newPwInput" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirmPwInput">Ulangi Kata Sandi Baru</label>
+        <input type="password" id="confirmPwInput" placeholder="••••••••" autocomplete="new-password">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="cancelChangePwBtn">Batal</button>
+        <button type="submit" class="btn btn-primary" id="saveChangePwBtn">Simpan Sandi Baru</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= TOAST ================= -->
+<div id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastMsg">Disalin</span>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+
+  let vaultKey = null;
+  let entries = [];
+  let groups = [];
+  let activeGroupId = null; // null = semua
+
+  // ---------- helpers: base64 <-> buffer ----------
+  function bufToB64(buf){
+    return btoa(String.fromCharCode(...new Uint8Array(buf)));
+  }
+  function b64ToBuf(str){
+    return Uint8Array.from(atob(str), c => c.charCodeAt(0)).buffer;
+  }
+
+  // ---------- crypto ----------
+  async function deriveKey(password, saltB64){
+    const salt = b64ToBuf(saltB64);
+    const baseKey = await crypto.subtle.importKey(
+      "raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]
+    );
+    return crypto.subtle.deriveKey(
+      { name: "PBKDF2", salt, iterations: 150000, hash: "SHA-256" },
+      baseKey,
+      { name: "AES-GCM", length: 256 },
+      false,
+      ["encrypt", "decrypt"]
+    );
+  }
+
+  async function encryptData(key, dataObj){
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ciphertext = await crypto.subtle.encrypt(
+      { name: "AES-GCM", iv }, key, enc.encode(JSON.stringify(dataObj))
+    );
+    return bufToB64(iv.buffer) + ":" + bufToB64(ciphertext);
+  }
+
+  async function decryptData(key, blob){
+    const parts = blob.split(":");
+    const iv = new Uint8Array(b64ToBuf(parts[0]));
+    const ciphertext = b64ToBuf(parts[1]);
+    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ciphertext);
+    return JSON.parse(dec.decode(plain));
+  }
+
+  async function saveVault(){
+    const blob = await encryptData(vaultKey, { groups, entries });
+    localStorage.setItem("vault_data", blob);
+  }
+
+  function hasVault(){
+    return localStorage.getItem("vault_salt") !== null;
+  }
+
+  async function setupVault(password){
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const saltB64 = bufToB64(salt.buffer);
+    localStorage.setItem("vault_salt", saltB64);
+    vaultKey = await deriveKey(password, saltB64);
+    entries = [];
+    groups = [];
+    await saveVault();
+  }
+
+  async function unlockVault(password){
+    const saltB64 = localStorage.getItem("vault_salt");
+    const key = await deriveKey(password, saltB64);
+    const blob = localStorage.getItem("vault_data");
+    const data = await decryptData(key, blob); // throws if password salah
+    vaultKey = key;
+    if(Array.isArray(data)){
+      // format lama (sebelum ada grup)
+      entries = data;
+      groups = [];
+    } else {
+      entries = Array.isArray(data.entries) ? data.entries : [];
+      groups = Array.isArray(data.groups) ? data.groups : [];
+    }
+  }
+
+  // ---------- toast ----------
+  let toastTimer = null;
+  function showToast(msg){
+    const el = $("toast");
+    $("toastMsg").textContent = msg;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 1800);
+  }
+
+  // ---------- clipboard ----------
+  async function copyToClipboard(text, label){
+    try{
+      if(navigator.clipboard && window.isSecureContext){
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      showToast(label + " disalin");
+    }catch(e){
+      showToast("Gagal menyalin");
+    }
+  }
+
+  // ---------- lock screen wiring ----------
+  const lockDial = $("lockDial");
+  const lockError = $("lockError");
+  const fieldPw2 = $("fieldPw2");
+  const labelPw1 = $("labelPw1");
+  const lockTitle = $("lockTitle");
+  const lockSub = $("lockSub");
+  const lockSubmitBtn = $("lockSubmitBtn");
+  const lockFootnote = $("lockFootnote");
+  let setupMode = false;
+
+  function initLockScreen(){
+    setupMode = !hasVault();
+    lockError.classList.remove("show");
+    $("pwInput1").value = "";
+    $("pwInput2").value = "";
+    if(setupMode){
+      lockTitle.textContent = "Buat Vault";
+      lockSub.textContent = "Buat kata sandi utama. Ingat baik-baik — tidak bisa dipulihkan jika lupa.";
+      labelPw1.textContent = "Kata Sandi Utama Baru";
+      fieldPw2.classList.remove("hidden");
+      lockSubmitBtn.textContent = "Buat & Buka Vault";
+      lockFootnote.textContent = "Data akan dienkripsi (AES-256) dan disimpan hanya di perangkat ini.";
+    } else {
+      lockTitle.textContent = "Vault Terkunci";
+      lockSub.textContent = "Masukkan kata sandi utama untuk membuka.";
+      labelPw1.textContent = "Kata Sandi Utama";
+      fieldPw2.classList.add("hidden");
+      lockSubmitBtn.textContent = "Buka Vault";
+      lockFootnote.textContent = "Data tersimpan terenkripsi secara lokal di perangkat ini.";
+    }
+  }
+
+  function showLockError(msg){
+    lockError.textContent = msg;
+    lockError.classList.add("show");
+  }
+
+  $("lockForm").addEventListener("submit", async function(e){
+    e.preventDefault();
+    lockError.classList.remove("show");
+    const pw1 = $("pwInput1").value;
+    const pw2 = $("pwInput2").value;
+
+    if(setupMode){
+      if(pw1.length < 6){
+        showLockError("Kata sandi minimal 6 karakter.");
+        return;
+      }
+      if(pw1 !== pw2){
+        showLockError("Konfirmasi kata sandi tidak cocok.");
+        return;
+      }
+      lockSubmitBtn.disabled = true;
+      try{
+        await setupVault(pw1);
+        enterVault();
+      }catch(err){
+        showLockError("Gagal membuat vault. Coba lagi.");
+      }finally{
+        lockSubmitBtn.disabled = false;
+      }
+    } else {
+      if(!pw1){
+        showLockError("Masukkan kata sandi.");
+        return;
+      }
+      lockSubmitBtn.disabled = true;
+      try{
+        await unlockVault(pw1);
+        enterVault();
+      }catch(err){
+        showLockError("Kata sandi salah.");
+      }finally{
+        lockSubmitBtn.disabled = false;
+      }
+    }
+  });
+
+  function enterVault(){
+    lockDial.classList.add("spin");
+    setTimeout(() => lockDial.classList.remove("spin"), 750);
+    $("lockScreen").classList.add("hidden");
+    $("vaultScreen").classList.remove("hidden");
+    $("searchInput").value = "";
+    activeGroupId = null;
+    renderGroups();
+    renderEntries();
+  }
+
+  $("lockBtn").addEventListener("click", function(){
+    vaultKey = null;
+    entries = [];
+    groups = [];
+    activeGroupId = null;
+    $("vaultScreen").classList.add("hidden");
+    $("lockScreen").classList.remove("hidden");
+    initLockScreen();
+  });
+
+  // ---------- entry rendering ----------
+  function escapeHtml(str){
+    const d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function groupName(id){
+    if(!id) return null;
+    const g = groups.find(x => x.id === id);
+    return g ? g.name : null;
+  }
+
+  function renderGroups(){
+    const nav = $("groupNav");
+    nav.innerHTML = "";
+
+    const allItem = document.createElement("div");
+    allItem.className = "group-item" + (activeGroupId === null ? " active" : "");
+    allItem.innerHTML = `<span class="gname">Semua</span><span class="gcount">${entries.length}</span>`;
+    allItem.addEventListener("click", () => { activeGroupId = null; renderGroups(); renderEntries(); });
+    nav.appendChild(allItem);
+
+    groups.forEach(g => {
+      const count = entries.filter(e => e.groupId === g.id).length;
+      const item = document.createElement("div");
+      item.className = "group-item" + (activeGroupId === g.id ? " active" : "");
+      item.innerHTML = `
+        <span class="gname">${escapeHtml(g.name)}</span>
+        <span class="gcount">${count}</span>
+        <button class="gdel" title="Hapus grup">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      `;
+      item.querySelector(".gname").parentElement.addEventListener("click", (e) => {
+        if(e.target.closest(".gdel")) return;
+        activeGroupId = g.id;
+        renderGroups();
+        renderEntries();
+      });
+      item.querySelector(".gdel").addEventListener("click", (e) => {
+        e.stopPropagation();
+        deleteGroup(g.id);
+      });
+      nav.appendChild(item);
+    });
+
+    const noGroupCount = entries.filter(e => !e.groupId).length;
+    if(noGroupCount > 0){
+      const item = document.createElement("div");
+      item.className = "group-item" + (activeGroupId === "__none__" ? " active" : "");
+      item.innerHTML = `<span class="gname">Tanpa Grup</span><span class="gcount">${noGroupCount}</span>`;
+      item.addEventListener("click", () => { activeGroupId = "__none__"; renderGroups(); renderEntries(); });
+      nav.appendChild(item);
+    }
+  }
+
+  async function deleteGroup(id){
+    const g = groups.find(x => x.id === id);
+    if(!g) return;
+    if(!confirm('Hapus grup "' + g.name + '"? Kredensial di dalamnya akan dipindah ke "Tanpa Grup".')) return;
+    groups = groups.filter(x => x.id !== id);
+    entries.forEach(e => { if(e.groupId === id) e.groupId = null; });
+    if(activeGroupId === id) activeGroupId = null;
+    try{
+      await saveVault();
+      renderGroups();
+      renderEntries();
+      showToast("Grup dihapus");
+    }catch(err){
+      showToast("Gagal menghapus grup");
+    }
+  }
+
+  function renderEntries(){
+    const q = $("searchInput").value.trim().toLowerCase();
+    let base = entries;
+    if(activeGroupId === "__none__"){
+      base = base.filter(e => !e.groupId);
+    } else if(activeGroupId !== null){
+      base = base.filter(e => e.groupId === activeGroupId);
+    }
+    const filtered = base.filter(e =>
+      e.label.toLowerCase().includes(q) || e.username.toLowerCase().includes(q)
+    );
+
+    $("entryCount").textContent = entries.length + (entries.length === 1 ? " item" : " item");
+    $("contentTitle").textContent =
+      activeGroupId === null ? "Kredensial Tersimpan" :
+      activeGroupId === "__none__" ? "Tanpa Grup" :
+      (groupName(activeGroupId) || "Kredensial Tersimpan");
+
+    const list = $("entryList");
+    list.innerHTML = "";
+
+    if(entries.length === 0){
+      $("emptyState").classList.remove("hidden");
+      list.classList.add("hidden");
+      return;
+    }
+    $("emptyState").classList.add("hidden");
+    list.classList.remove("hidden");
+
+    if(filtered.length === 0){
+      list.innerHTML = '<div class="empty-state"><p>Tidak ada hasil untuk filter/pencarian ini.</p></div>';
+      return;
+    }
+
+    filtered.forEach(entry => {
+      const card = document.createElement("div");
+      card.className = "entry-card";
+      const gName = groupName(entry.groupId);
+      const badgeHtml = (activeGroupId === null && gName) ? `<span class="entry-group-badge">${escapeHtml(gName)}</span><br>` : "";
+      card.innerHTML = `
+        <div class="entry-main">
+          ${badgeHtml}
+          <p class="entry-label">${escapeHtml(entry.label)}</p>
+          <div class="entry-row">
+            <span class="tag">User</span>
+            <span class="val">${escapeHtml(entry.username)}</span>
+            <button class="icon-btn copy-user" title="Salin username">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            </button>
+          </div>
+          <div class="entry-row">
+            <span class="tag">Pass</span>
+            <span class="val pw-display" data-revealed="0">••••••••••</span>
+            <button class="icon-btn toggle-pw" title="Lihat password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+            <button class="icon-btn copy-pw" title="Salin password">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="entry-actions">
+          <button class="icon-btn edit-entry" title="Edit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
+          <button class="icon-btn danger delete-entry" title="Hapus">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          </button>
+        </div>
+      `;
+
+      card.querySelector(".copy-user").addEventListener("click", () => copyToClipboard(entry.username, "Username"));
+      card.querySelector(".copy-pw").addEventListener("click", () => copyToClipboard(entry.password, "Password"));
+
+      const pwDisplay = card.querySelector(".pw-display");
+      card.querySelector(".toggle-pw").addEventListener("click", () => {
+        const revealed = pwDisplay.dataset.revealed === "1";
+        pwDisplay.textContent = revealed ? "••••••••••" : entry.password;
+        pwDisplay.dataset.revealed = revealed ? "0" : "1";
+      });
+
+      card.querySelector(".edit-entry").addEventListener("click", () => openEntryModal(entry.id));
+      card.querySelector(".delete-entry").addEventListener("click", () => deleteEntry(entry.id));
+
+      list.appendChild(card);
+    });
+  }
+
+  $("searchInput").addEventListener("input", renderEntries);
+
+  // ---------- modal: grup baru ----------
+  const groupModalOverlay = $("groupModalOverlay");
+  const groupForm = $("groupForm");
+  let groupCreateContext = "sidebar"; // "sidebar" atau "entryForm"
+
+  function openGroupModal(context){
+    groupCreateContext = context || "sidebar";
+    $("groupNameInput").value = "";
+    groupModalOverlay.classList.remove("hidden");
+    setTimeout(() => $("groupNameInput").focus(), 50);
+  }
+  function closeGroupModal(){
+    groupModalOverlay.classList.add("hidden");
+  }
+
+  $("addGroupBtn").addEventListener("click", () => openGroupModal("sidebar"));
+  $("cancelGroupBtn").addEventListener("click", () => {
+    if(groupCreateContext === "entryForm"){
+      $("entryGroupSelect").value = "";
+    }
+    closeGroupModal();
+  });
+  groupModalOverlay.addEventListener("click", (e) => { if(e.target === groupModalOverlay) closeGroupModal(); });
+
+  groupForm.addEventListener("submit", async function(e){
+    e.preventDefault();
+    const name = $("groupNameInput").value.trim();
+    if(!name) return;
+    const newGroup = {
+      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+      name
+    };
+    groups.push(newGroup);
+    try{
+      await saveVault();
+      closeGroupModal();
+      renderGroups();
+      renderEntries();
+      if(groupCreateContext === "entryForm"){
+        populateGroupSelect(newGroup.id);
+      }
+      showToast("Grup dibuat");
+    }catch(err){
+      showToast("Gagal membuat grup");
+    }
+  });
+
+  // ---------- modal: add/edit ----------
+  const overlay = $("entryModalOverlay");
+  const entryForm = $("entryForm");
+
+  function populateGroupSelect(selectedId){
+    const sel = $("entryGroupSelect");
+    sel.innerHTML = "";
+    const optNone = document.createElement("option");
+    optNone.value = "";
+    optNone.textContent = "Tanpa Grup";
+    sel.appendChild(optNone);
+    groups.forEach(g => {
+      const opt = document.createElement("option");
+      opt.value = g.id;
+      opt.textContent = g.name;
+      sel.appendChild(opt);
+    });
+    const optNew = document.createElement("option");
+    optNew.value = "__new__";
+    optNew.textContent = "+ Buat Grup Baru...";
+    sel.appendChild(optNew);
+    sel.value = selectedId || "";
+  }
+
+  $("entryGroupSelect").addEventListener("change", function(){
+    if(this.value === "__new__"){
+      openGroupModal("entryForm");
+    }
+  });
+
+  function openEntryModal(id){
+    entryForm.reset();
+    $("entryPassword").type = "password";
+    populateGroupSelect(null);
+    if(id){
+      const entry = entries.find(e => e.id === id);
+      if(!entry) return;
+      $("modalTitle").textContent = "Edit Kredensial";
+      $("entryId").value = entry.id;
+      $("entryLabel").value = entry.label;
+      $("entryUsername").value = entry.username;
+      $("entryPassword").value = entry.password;
+      populateGroupSelect(entry.groupId || "");
+    } else {
+      $("modalTitle").textContent = "Tambah Kredensial";
+      $("entryId").value = "";
+      if(activeGroupId && activeGroupId !== "__none__"){
+        populateGroupSelect(activeGroupId);
+      }
+    }
+    overlay.classList.remove("hidden");
+    setTimeout(() => $("entryLabel").focus(), 50);
+  }
+
+  function closeEntryModal(){
+    overlay.classList.add("hidden");
+  }
+
+  $("addBtn").addEventListener("click", () => openEntryModal(null));
+  $("cancelEntryBtn").addEventListener("click", closeEntryModal);
+  overlay.addEventListener("click", (e) => { if(e.target === overlay) closeEntryModal(); });
+
+  $("entryPwToggle").addEventListener("click", () => {
+    const input = $("entryPassword");
+    input.type = input.type === "password" ? "text" : "password";
+  });
+
+  entryForm.addEventListener("submit", async function(e){
+    e.preventDefault();
+    const id = $("entryId").value;
+    const label = $("entryLabel").value.trim();
+    const username = $("entryUsername").value.trim();
+    const password = $("entryPassword").value;
+    let groupId = $("entryGroupSelect").value;
+
+    if(!label || !username || !password) return;
+    if(groupId === "__new__"){
+      showToast("Selesaikan pembuatan grup baru dulu");
+      return;
+    }
+    groupId = groupId || null;
+
+    if(id){
+      const entry = entries.find(en => en.id === id);
+      if(entry){
+        entry.label = label;
+        entry.username = username;
+        entry.password = password;
+        entry.groupId = groupId;
+      }
+    } else {
+      entries.push({
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2),
+        label, username, password, groupId
+      });
+    }
+
+    $("saveEntryBtn").disabled = true;
+    try{
+      await saveVault();
+      closeEntryModal();
+      renderGroups();
+      renderEntries();
+      showToast(id ? "Kredensial diperbarui" : "Kredensial disimpan");
+    }catch(err){
+      showToast("Gagal menyimpan");
+    }finally{
+      $("saveEntryBtn").disabled = false;
+    }
+  });
+
+  async function deleteEntry(id){
+    const entry = entries.find(e => e.id === id);
+    if(!entry) return;
+    if(!confirm('Hapus kredensial "' + entry.label + '"?')) return;
+    entries = entries.filter(e => e.id !== id);
+    try{
+      await saveVault();
+      renderGroups();
+      renderEntries();
+      showToast("Kredensial dihapus");
+    }catch(err){
+      showToast("Gagal menghapus");
+    }
+  }
+
+  // ---------- backup: export / import ----------
+  const backupModalOverlay = $("backupModalOverlay");
+
+  $("backupBtn").addEventListener("click", () => backupModalOverlay.classList.remove("hidden"));
+  $("closeBackupBtn").addEventListener("click", () => backupModalOverlay.classList.add("hidden"));
+  backupModalOverlay.addEventListener("click", (e) => { if(e.target === backupModalOverlay) backupModalOverlay.classList.add("hidden"); });
+
+  $("exportBackupBtn").addEventListener("click", function(){
+    const salt = localStorage.getItem("vault_salt");
+    const data = localStorage.getItem("vault_data");
+    if(!salt || !data){
+      showToast("Tidak ada data untuk dicadangkan");
+      return;
+    }
+    const payload = {
+      app: "vault-backup",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      salt, data
+    };
+    const blobFile = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blobFile);
+    const a = document.createElement("a");
+    const ts = new Date().toISOString().slice(0,10);
+    a.href = url;
+    a.download = "vault-backup-" + ts + ".json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Cadangan diunduh");
+  });
+
+  $("importBackupInput").addEventListener("change", function(e){
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(){
+      let payload;
+      try{
+        payload = JSON.parse(reader.result);
+      }catch(err){
+        showToast("File cadangan tidak valid");
+        e.target.value = "";
+        return;
+      }
+      if(!payload || payload.app !== "vault-backup" || !payload.salt || !payload.data){
+        showToast("File cadangan tidak dikenali");
+        e.target.value = "";
+        return;
+      }
+      if(!confirm("Memulihkan cadangan akan mengganti seluruh data vault saat ini. Lanjutkan?")){
+        e.target.value = "";
+        return;
+      }
+      localStorage.setItem("vault_salt", payload.salt);
+      localStorage.setItem("vault_data", payload.data);
+      vaultKey = null;
+      entries = [];
+      groups = [];
+      activeGroupId = null;
+      e.target.value = "";
+      backupModalOverlay.classList.add("hidden");
+      $("vaultScreen").classList.add("hidden");
+      $("lockScreen").classList.remove("hidden");
+      initLockScreen();
+      showToast("Cadangan dipulihkan, silakan masuk");
+    };
+    reader.readAsText(file);
+  });
+
+  // ---------- ganti kata sandi utama ----------
+  const changePwModalOverlay = $("changePwModalOverlay");
+  const changePwForm = $("changePwForm");
+  const changePwError = $("changePwError");
+
+  $("changePwBtn").addEventListener("click", () => {
+    changePwForm.reset();
+    changePwError.classList.remove("show");
+    changePwModalOverlay.classList.remove("hidden");
+    setTimeout(() => $("currentPwInput").focus(), 50);
+  });
+  $("cancelChangePwBtn").addEventListener("click", () => changePwModalOverlay.classList.add("hidden"));
+  changePwModalOverlay.addEventListener("click", (e) => { if(e.target === changePwModalOverlay) changePwModalOverlay.classList.add("hidden"); });
+
+  function showChangePwError(msg){
+    changePwError.textContent = msg;
+    changePwError.classList.add("show");
+  }
+
+  changePwForm.addEventListener("submit", async function(e){
+    e.preventDefault();
+    changePwError.classList.remove("show");
+    const currentPw = $("currentPwInput").value;
+    const newPw = $("newPwInput").value;
+    const confirmPw = $("confirmPwInput").value;
+
+    if(!currentPw){
+      showChangePwError("Masukkan kata sandi saat ini.");
+      return;
+    }
+    if(newPw.length < 6){
+      showChangePwError("Kata sandi baru minimal 6 karakter.");
+      return;
+    }
+    if(newPw !== confirmPw){
+      showChangePwError("Konfirmasi kata sandi baru tidak cocok.");
+      return;
+    }
+
+    $("saveChangePwBtn").disabled = true;
+    try{
+      // verifikasi kata sandi saat ini terhadap data tersimpan
+      const currentSaltB64 = localStorage.getItem("vault_salt");
+      const testKey = await deriveKey(currentPw, currentSaltB64);
+      const currentBlob = localStorage.getItem("vault_data");
+      await decryptData(testKey, currentBlob); // lempar error kalau salah
+
+      // buat salt & kunci baru, lalu re-enkripsi data yang sedang ada di memori
+      const newSalt = crypto.getRandomValues(new Uint8Array(16));
+      const newSaltB64 = bufToB64(newSalt.buffer);
+      const newKey = await deriveKey(newPw, newSaltB64);
+
+      const newBlob = await encryptData(newKey, { groups, entries });
+      localStorage.setItem("vault_salt", newSaltB64);
+      localStorage.setItem("vault_data", newBlob);
+      vaultKey = newKey;
+
+      changePwModalOverlay.classList.add("hidden");
+      showToast("Kata sandi utama berhasil diganti");
+    }catch(err){
+      showChangePwError("Kata sandi saat ini salah.");
+    }finally{
+      $("saveChangePwBtn").disabled = false;
+    }
+  });
+
+  // ---------- peringatan sebelum keluar ----------
+  window.addEventListener("beforeunload", function(e){
+    if(vaultKey){
+      e.preventDefault();
+      e.returnValue = "Vault masih terbuka. Yakin ingin keluar tanpa mengunci?";
+      return e.returnValue;
+    }
+  });
+
+  // ---------- init ----------
+  initLockScreen();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
+})();
+</script>
+</body>
+</html>
